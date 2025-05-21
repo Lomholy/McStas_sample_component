@@ -1,0 +1,141 @@
+/*******************************************************************************
+*         McStas instrument definition URL=http://www.mcstas.org
+*
+* Instrument: test (rename also the example and DEFINE lines below)
+*
+* %Identification
+* Written by: Your name (email)
+* Date: Current Date
+* Origin: Your institution
+* %INSTRUMENT_SITE: Templates
+*
+* Instrument short description
+*
+* %Description
+* Instrument longer description (type, elements, usage...)
+*
+* Example: mcrun test.instr <parameters=values>
+*
+* once your instrument is written and functional:
+* - replace INSTRUMENT_SITE entry above with your Institution name as a single word
+* - rename the instrument name after DEFINE INSTRUMENT below
+* - update the parameter help in the following Parameters section
+* - update the instrument description, and better add a usage example with a
+*     sensible parameter set.
+*
+* %Parameters
+*
+* %Link
+* A reference/HTML link for more information
+*
+* %End
+*******************************************************************************/
+DEFINE INSTRUMENT template(E_i=5, flux_mult=0.5512)
+
+/* The DECLARE section allows us to declare variables or  small      */
+/* functions in C syntax. These may be used in the whole instrument. */
+DECLARE
+%{
+  double focus_w;
+  double focus_h;
+%}
+
+/* The INITIALIZE section is executed when the simulation starts     */
+/* (C code). You may use them as component parameter values.         */
+INITIALIZE
+%{
+  focus_w = 1;
+  focus_h = 1;
+%}
+
+/* Here comes the TRACE section, where the actual      */
+/* instrument is defined as a sequence of components.  */
+TRACE
+
+/* The Arm() class component defines reference points and orientations  */
+/* in 3D space. Every component instance must have a unique name. Here, */
+/* Origin is used. This Arm() component is set to define the origin of  */
+/* our global coordinate system (AT (0,0,0) ABSOLUTE). It may be used   */
+/* for further RELATIVE reference, Other useful keywords are : ROTATED  */
+/* EXTEND GROUP PREVIOUS. Also think about adding a neutron source !    */
+/* Progress_bar is an Arm displaying simulation progress.               */
+COMPONENT Origin = Progress_bar()
+  AT (0,0,0) ABSOLUTE
+
+COMPONENT source = Source_simple(
+    yheight = 0.01,
+    xwidth = 0.01,
+    dist = 10.5,
+    focus_xw = .01,
+    focus_yh = .01,
+    E0 = E_i,
+    dE = 0.1,
+    flux = 1e14*flux_mult
+) AT (0, 0, 0) RELATIVE Origin
+ROTATED (0, 0, 0) RELATIVE Origin
+
+COMPONENT pre_samp_arm = Arm(
+    ) AT (0, 0, 10.475) RELATIVE source
+
+COMPONENT pre_samp_det = PSD_monitor(
+    nx = 200,
+    ny = 200,
+    filename="pre_det",
+    xwidth = 0.01,
+    yheight = 0.01,
+    restore_neutron = 1
+) AT (0, 0, 0) RELATIVE pre_samp_arm
+
+
+COMPONENT arm_sample = Arm(
+    
+) AT (0, 0, 0.025) RELATIVE pre_samp_arm
+ROTATED (0, 0, 0) RELATIVE pre_samp_arm
+
+COMPONENT balls = Sans_spheres(
+  R = 50, Phi = 5, Delta_rho = 1, 
+  sigma_abs = 0, 
+  xwidth=0.05, yheight=0.05, zdepth=0.05,
+  focus_xw=focus_w,
+  focus_yh=focus_h,
+  target_index=3
+) AT (0,0,0) RELATIVE arm_sample
+
+COMPONENT total_scat = PSD_monitor_4PI(
+    nx = 360,
+    ny = 360,
+    radius=0.1,
+    restore_neutron=1,
+    filename="total_scat"
+) //WHEN (total_scattering==1)
+AT (0, 0, 0) RELATIVE arm_sample
+
+
+COMPONENT arm_det = Arm(
+) AT (0, 0, 0) RELATIVE arm_sample
+ROTATED (0, 0, 0) RELATIVE arm_sample
+// COMPONENT beamstop = Beamstop(
+//     radius = 0.04
+
+// ) AT (0, 0, 0.9) RELATIVE arm_sample
+
+
+COMPONENT psd_det = PSD_monitor(
+    nx = 1000,
+    ny = 1000,
+    filename="post_det",
+    xwidth = 1,
+    yheight = 1,
+    restore_neutron = 1
+) AT (0, 0, 1) RELATIVE arm_det
+
+
+
+/* This section is executed when the simulation ends (C code). Other    */
+/* optional sections are : SAVE                                         */
+FINALLY
+%{
+%}
+/* The END token marks the instrument definition end */
+END
+
