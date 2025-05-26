@@ -30,7 +30,7 @@
 *
 * %End
 *******************************************************************************/
-DEFINE INSTRUMENT template(E_i=5, flux_mult=0.5512)
+DEFINE INSTRUMENT sans(E_i=5, flux_mult=0.5512)
 
 /* The DECLARE section allows us to declare variables or  small      */
 /* functions in C syntax. These may be used in the whole instrument. */
@@ -93,9 +93,8 @@ COMPONENT arm_sample = Arm(
 ROTATED (0, 0, 0) RELATIVE pre_samp_arm
 
 COMPONENT balls = Sans_spheres(
-  R = 50, Phi = 5, Delta_rho = 1, 
-  sigma_abs = 0, 
-  xwidth=0.05, yheight=0.05, zdepth=0.05,
+  R = 100, Phi = 1e-2, Delta_rho = 5, sigma_abs = 0.50,
+  xwidth=0.05, yheight=0.05, zdepth=0.01,
   focus_xw=focus_w,
   focus_yh=focus_h,
   target_index=3
@@ -114,11 +113,6 @@ AT (0, 0, 0) RELATIVE arm_sample
 COMPONENT arm_det = Arm(
 ) AT (0, 0, 0) RELATIVE arm_sample
 ROTATED (0, 0, 0) RELATIVE arm_sample
-// COMPONENT beamstop = Beamstop(
-//     radius = 0.04
-
-// ) AT (0, 0, 0.9) RELATIVE arm_sample
-
 
 COMPONENT psd_det = PSD_monitor(
     nx = 1000,
@@ -127,7 +121,7 @@ COMPONENT psd_det = PSD_monitor(
     xwidth = 1,
     yheight = 1,
     restore_neutron = 1
-) AT (0, 0, 1) RELATIVE arm_det
+) AT (0, 0, 5) RELATIVE arm_det
 
 
 

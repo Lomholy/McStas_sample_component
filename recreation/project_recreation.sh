@@ -2,6 +2,9 @@
 # The single scattering components in McStas
 rm -r ../data/*
 
+# First move into this folder
+cd $HOME/Desktop/Phd/Projects/single_scattering/recreation
+
 #Scan flux
 if test "$1" = "flux"; then
     cd ../Incoherent
@@ -13,7 +16,7 @@ fi
 # Incoherent scattering one shot
 if test "$1" = "thin"; then
     cd ../Incoherent
-    mcrun ../Incoherent/inc.instr sample="thin" -n 1e6 -c -d ../data/inc_box_thin\
+    mcrun ./inc.instr sample="thin" -n 1e6 -c -d ../data/inc_box_thin\
      total_scattering=0 
     mcplot ../data/inc_box_thin
 fi
@@ -21,7 +24,7 @@ fi
 # Backscattering
 if test "$1" = "thick"; then
     cd ../Incoherent
-    mcrun -c ../Incoherent/inc.instr sample="thick" thick=0.001,0.05 -N 50 -n 1e5\
+    mcrun -c ./inc.instr sample="thick" thick=0.001,0.05 -N 50 -n 1e5\
     -d ../data/inc_box_thick 
     mcplot ../data/inc_box_thick
 fi
@@ -30,7 +33,7 @@ fi
 # Small angle scattering instrument
 if test "$1" = "sans"; then
     cd ../Sans
-    mcrun --mpi=4 -c ../Sans/sans.instr E_i=5 -n 4e7\
+    mcrun --mpi=16 -c ../Sans/sans.instr E_i=5 -n 1e7\
     -d ../data/sans 
     mcplot ../data/sans
 fi
