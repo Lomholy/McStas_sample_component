@@ -1,9 +1,11 @@
 # This script runs every mcrun needed for the validification of 
 # The single scattering components in McStas
-rm -r ../data/*
+
 
 # First move into this folder
 cd $HOME/Desktop/Phd/Projects/single_scattering/recreation
+
+rm -r ../data/*
 
 #Scan flux
 if test "$1" = "flux"; then
@@ -36,6 +38,19 @@ if test "$1" = "sans"; then
     mcrun --mpi=16 -c ../Sans/sans.instr E_i=5 -n 1e7\
     -d ../data/sans 
     mcplot ../data/sans
+fi
+
+# Powder diffractometer
+if test "$1" = "powder"; then
+    cd ../Powder
+    mcrun -c ../Powder/DMC.instr flux_mult=3.44 -n 1e7\
+    -d ../data/powder_nacalf
+    # mcplot ../data/powder
+
+    # Powder diffractometer copper
+    mcrun -c ../Powder/DMC.instr flux_mult=3.44 -n 1e7  \
+    -d ../data/powder_cop filename="Copper.cif"
+    # mcplot ../data/powder
 fi
 
 cd ../recreation
