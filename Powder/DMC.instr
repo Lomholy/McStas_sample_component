@@ -1,0 +1,152 @@
+/*******************************************************************************
+* Instrument: DMC Powder Diffractometer
+*
+* %I
+* Written by: Daniel Lomholt Christensen (daniel.lomholt.2000@gmail.com)
+* Date: 28/04/2025
+* Origin: Niels Bohr Institute University of Copenhagen
+* %INSTRUMENT_SITE: PSI
+*
+* instrument short description
+*
+* %D
+* This instrument is a simple version of the cold powder diffractometer located
+* at the SINQ source at PSI, called DMC.
+*
+* Example: parameters=values
+*
+* %P
+* Par1: [unit] Parameter1 description
+*
+* %L
+* <reference/HTML link>
+*
+* %E
+*******************************************************************************/
+DEFINE INSTRUMENT DMC(flux_mult=1,
+                        lam0=2.567, 
+                        dlam=0.01, 
+                        q=1.8734,
+                        mono_scan = 0,
+                        col_div = 20,
+                        int sample = 0,
+                        string filename="NaCaAlF.cif")
+
+DECLARE
+%{
+%}
+
+USERVARS
+%{
+%}
+
+INITIALIZE
+%{
+
+%}
+
+//==============================================================================
+//==============================================================================
+//==============================================================================
+
+TRACE
+
+COMPONENT origin = Progress_bar()
+AT (0, 0, 0) RELATIVE ABSOLUTE
+
+//==============================================================================
+//===========================SOURCE AND BEAM PORT=============================
+//==============================================================================
+
+COMPONENT source = Source_simple(
+    yheight = 0.005,
+    xwidth = 0.005,
+    dist = 10.5,
+    focus_xw = .01,
+    focus_yh = .01,
+    lambda0 = lam0, dlambda = dlam,
+    flux = 1e14*flux_mult
+) AT (0, 0, 0) RELATIVE ABSOLUTE
+ROTATED (0, 0, 0) RELATIVE ABSOLUTE
+
+COMPONENT slit = Slit(
+    xwidth=0.02, yheight=0.12
+) AT (0, 0, 1.5) RELATIVE source
+
+COMPONENT slit_detector = PSD_monitor(
+    xwidth=0.02, yheight=0.12, restore_neutron=1
+) AT (0, 0, 0.001) RELATIVE slit
+
+
+COMPONENT arm_guide_end = Arm(
+) AT (0,0,10.475) RELATIVE source
+
+
+//==============================================================================
+//================================= SAMPLE =====================================
+//==============================================================================
+
+
+COMPONENT sample_psd = PSD_monitor(
+    xwidth=0.012, yheight=0.012, restore_neutron=1
+) AT (0, 0, 0) RELATIVE arm_guide_end
+
+COMPONENT sample_div = Divergence_monitor(
+    nh = 200,
+    nv = 200,
+    filename = "sample_div",
+    xwidth = 0.012,
+    yheight = 0.012,
+    restore_neutron=1
+) AT (0,0,0) RELATIVE arm_guide_end
+
+COMPONENT sample_E = E_monitor(
+    nE = 200,
+    filename = "sample_E",
+    xwidth = 0.012,
+    yheight = 0.012,
+    Emin = 1,
+    Emax = 30,
+    restore_neutron = 1
+) AT (0,0,0) RELATIVE arm_guide_end
+
+
+COMPONENT arm_sample = Arm(
+    
+) AT (0,0,0.025) RELATIVE arm_guide_end
+
+
+
+SPLIT 1 COMPONENT sample = PowderN( reflections = filename,
+    xwidth = 0.01, yheight=0.01, zdepth=0.001,
+    p_interact=0.98,p_inc=0.01, p_transmit=0.01, d_phi=1,
+    sigma_abs=-1,sigma_inc=-1, order=0
+    // Test absorption effects 
+) AT (0, 0, 0) RELATIVE arm_sample
+
+
+COMPONENT pitest = PSD_monitor_4PI(
+    nx = 360,
+    ny = 360,
+    restore_neutron = 1
+) AT (0, 0, 0) RELATIVE arm_sample
+//==============================================================================
+//============================= DETECTOR BACKENDS ==============================
+//==============================================================================
+
+
+COMPONENT banana_mon = Monitor_nD(
+    options = "banana, theta bins=800 limits=[20 100]",
+    radius=1, yheight = 0.001, filename = "banana"
+) AT (0, 0, 0) RELATIVE arm_sample
+
+
+
+
+
+
+FINALLY
+%{
+%}
+
+END
