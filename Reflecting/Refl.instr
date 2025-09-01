@@ -1,0 +1,144 @@
+/*******************************************************************************
+* Instrument: refl Powder Diffractometer
+*
+* %I
+* Written by: Daniel Lomholt Christensen (daniel.lomholt.2000@gmail.com)
+* Date: 28/08/2025
+* Origin: Niels Bohr Institute University of Copenhagen
+* %INSTRUMENT_SITE: PSI
+*
+* instrument short description
+*
+* %D
+*
+* Example: parameters=values
+*
+* %P
+* Par1: [unit] Parameter1 description
+*
+* %L
+* <reference/HTML link>
+*
+* %E
+*******************************************************************************/
+DEFINE INSTRUMENT refl(flux_mult=1,
+                        lam0=1.2, 
+                        dlam=0.01, 
+                        sample_rotation = 0,
+                        int sample = 0,
+                        mos = 20,
+                        string filename="YBaCuO.cif")
+
+DECLARE
+%{
+%}
+
+USERVARS
+%{
+%}
+
+INITIALIZE
+%{
+
+%}
+
+//==============================================================================
+//==============================================================================
+//==============================================================================
+
+TRACE
+
+COMPONENT origin = Progress_bar()
+AT (0, 0, 0) RELATIVE ABSOLUTE
+
+//==============================================================================
+//===========================SOURCE AND BEAM PORT=============================
+//==============================================================================
+
+COMPONENT source = Source_simple(
+    yheight = 0.0001,
+    xwidth = 0.0001,
+    dist = 10.5,
+    focus_xw = 0.0001,
+    focus_yh = 0.0001,
+    lambda0 = lam0, dlambda = dlam,
+    flux = 1e14*flux_mult
+) AT (0, 0, 0) RELATIVE ABSOLUTE
+ROTATED (0, 0, 0) RELATIVE ABSOLUTE
+
+COMPONENT slit = Slit(
+    xwidth=0.02, yheight=0.12
+) AT (0, 0, 1.5) RELATIVE source
+
+COMPONENT slit_detector = PSD_monitor(
+    xwidth=0.02, yheight=0.12, restore_neutron=1
+) AT (0, 0, 0.001) RELATIVE slit
+
+
+COMPONENT arm_guide_end = Arm(
+) AT (0,0,10.475) RELATIVE source
+
+
+//==============================================================================
+//================================= SAMPLE =====================================
+//==============================================================================
+
+
+COMPONENT sample_psd = PSD_monitor(
+    xwidth=0.01, yheight=0.01, restore_neutron=1
+) AT (0, 0, 0) RELATIVE arm_guide_end
+
+COMPONENT sample_div = Divergence_monitor(
+    nh = 200,
+    nv = 200,
+    filename = "sample_div",
+    xwidth = 0.012,
+    yheight = 0.012,
+    restore_neutron=1
+) AT (0,0,0) RELATIVE arm_guide_end
+
+
+
+COMPONENT arm_sample = Arm(
+) AT (0,0,0.25) RELATIVE arm_guide_end
+
+
+COMPONENT sample = Mirror(
+    reflect = "supermirror_m3.rfl",
+    xwidth = 0.1,
+    yheight = 0.1,
+    center = 1
+
+) AT (0, 0, 0) RELATIVE arm_sample
+ROTATED (0, 90+sample_rotation, 0) RELATIVE arm_sample
+
+
+
+COMPONENT pitest = PSD_monitor_4PI(
+    nx = 360,
+    ny = 360,
+    restore_neutron = 1
+) AT (0, 0, 0.0001) RELATIVE arm_sample
+//==============================================================================
+//============================= DETECTOR BACKENDS ==============================
+//==============================================================================
+COMPONENT arm_det = Arm(
+    
+) AT (0,0,0) RELATIVE arm_sample
+ROTATED (0,2*sample_rotation,0) RELATIVE arm_sample
+
+
+COMPONENT psd_at_refl = PSD_monitor(
+    xwidth=0.01,
+    yheight=0.01,
+    restore_neutron = 1
+) 
+AT (0, 0, 1) RELATIVE PREVIOUS
+ROTATED (0, 0, 0) RELATIVE PREVIOUS
+
+
+FINALLY
+%{
+%}
+
+END
