@@ -1,0 +1,42 @@
+
+### FIGURE
+figure.facecolor: white
+figure.dpi: 100
+figure.titlesize: 14
+figure.titleweight: bold
+
+### TEXTS
+text.usetex : True ## This is quite slow on mac. Use latex on individual text instead
+
+### LINES
+lines.linewidth: 1.5
+
+### PATCHES
+patch.facecolor: 0072B2
+
+### LEGEND
+legend.fontsize: 14
+
+### TICKS
+xtick.direction: in
+ytick.direction: in
+xtick.labelsize: 16
+ytick.labelsize: 16
+# Enable minor ticks
+xtick.minor.visible : True
+ytick.minor.visible : True
+# Make the minor ticks go inwards
+
+### FONTS
+
+### AXES
+axes.grid: False
+axes.facecolor: white
+axes.linewidth: 1.0
+axes.titlesize: 16
+axes.labelsize: 16
+axes.spines.top: True
+axes.spines.right: True
+axes.prop_cycle: cycler('color', ['A52C00', '3079E1', '377D51', 'E145DE', '322C5B', 'C53030'])
+image.cmap: gist_ncar_r
+# Burnt Umber, Royal Blue, Forest Green, Electric Magenta, Deep Violet, Crimson Red
