@@ -1,0 +1,211 @@
+/*******************************************************************************
+* Instrument: DMC Powder Diffractometer
+*
+* %I
+* Written by: Daniel Lomholt Christensen (daniel.lomholt.2000@gmail.com)
+* Date: 28/04/2025
+* Origin: Niels Bohr Institute University of Copenhagen
+* %INSTRUMENT_SITE: PSI
+*
+* instrument short description
+*
+* %D
+* This instrument is a simple version of the cold powder diffractometer located
+* at the SINQ source at PSI, called DMC.
+*
+* Example: parameters=values
+*
+* %P
+* Par1: [unit] Parameter1 description
+*
+* %L
+* <reference/HTML link>
+*
+* %E
+*******************************************************************************/
+DEFINE INSTRUMENT DMC(flux_mult=1,
+                        lam0=1.95, 
+                        dlam=0.3, 
+                        beam_size=0.01,
+                        delta_bragg = 0,
+                        col_div = 20,
+                        int sample = 0,
+                        mos = 20,
+                        string filename="YBaCuO.cif")
+
+DECLARE
+%{
+    double lmin; // Set the lambda monitors size
+    double lmax;
+%}
+
+USERVARS
+%{
+%}
+
+INITIALIZE
+%{
+    lmin = lam0 - dlam - dlam/2;
+    lmax = lam0 + dlam + dlam/2;
+%}
+
+//==============================================================================
+//==============================================================================
+//==============================================================================
+
+TRACE
+
+COMPONENT origin = Progress_bar()
+AT (0, 0, 0) RELATIVE ABSOLUTE
+
+//==============================================================================
+//===========================SOURCE AND BEAM PORT=============================
+//==============================================================================
+
+COMPONENT source = Source_simple(
+    yheight = 0.01,
+    xwidth = 0.01,
+    dist = 10.5,
+    focus_xw = 0.012,
+    focus_yh = 0.012,
+    lambda0 = lam0, dlambda = dlam,
+    flux = 1e13*flux_mult
+) AT (0, 0, 0) RELATIVE ABSOLUTE
+ROTATED (0, 0, 0) RELATIVE ABSOLUTE
+
+
+COMPONENT arm_guide_end = Arm(
+) AT (0,0,10.475) RELATIVE source
+
+
+//==============================================================================
+//================================= SAMPLE =====================================
+//==============================================================================
+
+
+COMPONENT sample_psd = PSD_monitor(
+    xwidth=0.01, yheight=0.01, restore_neutron=1
+) AT (0, 0, 0) RELATIVE arm_guide_end
+
+COMPONENT sample_div = Divergence_monitor(
+    nh = 200,
+    nv = 200,
+    filename = "sample_div",
+    xwidth = 0.01,
+    yheight = 0.01,
+    restore_neutron=1
+) AT (0,0,0.00001) RELATIVE arm_guide_end
+
+COMPONENT incoming_wavelength = L_monitor(
+    nL = 2000,
+    filename = "lam_entry",
+    xwidth = 0.01,
+    yheight = 0.01,
+    Lmin = lmin,
+    Lmax = lmax,
+    restore_neutron = 1
+) AT (0, 0, 0.00011) RELATIVE PREVIOUS
+
+
+COMPONENT arm_sample = Arm(
+    
+) AT (0,0,0.025) RELATIVE arm_guide_end
+
+
+SPLIT 86 
+
+COMPONENT single_sample = Single_crystal(
+    reflections = filename,
+    xwidth =    0.01,
+    yheight =   0.01,
+    zdepth =    0.0001,
+    p_transmit = 0.001,
+    order = 1,
+    sigma_inc = -1,
+    sigma_abs = -1,
+    mosaic=mos,
+    powder=0,
+    delta_d_d =1e-3
+) WHEN (sample==0)
+AT (0, 0, 0) RELATIVE arm_sample
+ROTATED (0,delta_bragg,0) RELATIVE arm_sample
+
+COMPONENT ncrystal_sample = NCrystal_sample(
+    cfg = "YBaCuO.ncmat;bragg=1;incoh_elas=0;inelas=0;sans=0;dir1=@crys_hkl:1,0,0@lab:1,0,0;dir2=@crys:0,0,1@lab:0,0,1;mos=20arcmin",
+    absorptionmode=0,
+    multscat=0,
+    xwidth = 0.01,
+    yheight = 0.01,
+    zdepth = 0.0001
+) WHEN (sample==1)
+AT (0, 0, 0.0001) RELATIVE arm_sample
+ROTATED (0,delta_bragg,0) RELATIVE arm_sample
+
+
+// COMPONENT beamstop = Beamstop(
+//     radius = 0.1
+// ) AT (0,0,0.8) RELATIVE PREVIOUS
+// ROTATED (0, 0, 0) RELATIVE PREVIOUS
+
+
+//==============================================================================
+//============================= DETECTOR BACKENDS ==============================
+//==============================================================================
+
+COMPONENT pitest = PSD_monitor_4PI(
+    nx = 3600,
+    ny = 3600,
+    restore_neutron = 1
+) AT (0, 0, 0) RELATIVE arm_sample
+ROTATED (0,0,0) RELATIVE arm_sample
+
+COMPONENT arm_det = Arm(
+    
+) AT (0,0,0) RELATIVE arm_sample
+ROTATED (0,90.8+2*delta_bragg,0) RELATIVE arm_sample
+
+COMPONENT lam_mon_ybco = L_monitor(
+    nL = 200,
+    filename = "lam_mon",
+    xwidth = 0.1,
+    yheight = 0.1,
+    Lmin = lmin,
+    Lmax = lmax,
+    restore_neutron = 1
+) AT (0, 0, 2) RELATIVE arm_det
+ROTATED (0,0,0) RELATIVE arm_det
+
+COMPONENT psd_at_refl = PSD_monitor(
+    restore_neutron = 1
+) AT (0, 0, 0) RELATIVE PREVIOUS
+ROTATED (0, 0, 0) RELATIVE PREVIOUS
+
+
+COMPONENT arm_det_check = Arm(
+    
+) AT (0,0,0) RELATIVE arm_sample
+ROTATED (0,90 + 2*delta_bragg,0) RELATIVE arm_sample
+
+COMPONENT lam_mon_cop = L_monitor(
+    nL = 1000,
+    filename = "lam_mon_cop",
+    xwidth = 0.2,
+    yheight = 0.2,
+    Lmin = 1.78,
+    Lmax = 1.88,
+    restore_neutron = 1
+) AT (0, 0, 2) RELATIVE arm_det_check
+ROTATED (0,0,0) RELATIVE arm_det_check
+
+COMPONENT psd_at_refl_check = PSD_monitor(
+    restore_neutron = 1,
+    xwidth = 0.1,
+    yheight = 0.1
+) AT (0, 0, 0.00001) RELATIVE PREVIOUS
+ROTATED (0, 0, 0) RELATIVE PREVIOUS
+
+FINALLY
+%{
+%}
+
+END

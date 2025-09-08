@@ -1,0 +1,93 @@
+NCMAT v7
+#
+# Ba2Cu4O8Y (orthorombic, SG-65)
+#
+# Atoms per unit cell: 4xBa+8xCu+16xO+2xY
+#
+# Structure converted (with NCrystal.cifutils module) from:
+#
+#   "Redetermination of the structure of the 80 K superconductor
+#   YBa~2~Cu~4~O~8~ by time-of-flight neutron powder diffraction"
+#   Lightfoot, P., et al. [Acta Crystallographica Section C, 1991]
+#   DOI: https://dx.doi.org/10.1107/S0108270190011271
+#   Crystallography Open Database entry 1000031
+#   https://www.crystallography.net/cod/1000031.html
+#
+# IMPORTANT NOTICE: This is a mostly automatic conversion which has not been
+#                   verified!  In particular the @DYNINFO sections might need
+#                   post-editing. Before distributing this file to other people,
+#                   please review this, amend the comments here to document,
+#                   anything done, and remove this notice.
+#
+# Notice: The following WARNINGS were emitted when loading the CIF data:
+#
+#   NCrystalUserWarning : Structure received major corrections by spglib (at the 75.2812% level)
+#   NCrystalUserWarning : ignoring uiso info present in CIF input for "Ba" since uiso_temperature parameter value is not provided
+#   NCrystalUserWarning : ignoring uiso info present in CIF input for "Cu" since uiso_temperature parameter value is not provided
+#   NCrystalUserWarning : ignoring uiso info present in CIF input for "O" since uiso_temperature parameter value is not provided
+#   NCrystalUserWarning : ignoring uiso info present in CIF input for "Y" since uiso_temperature parameter value is not provided
+#
+# WARNING: Fallback (dummy) Debye temperature values were used for 4 atoms!
+#
+# NOTICE: crystal structure was verified with spglib to be self-consistent.
+#
+@CELL
+  lengths 3.8708 27.2309 3.8402
+  angles 90 90 90
+@SPACEGROUP
+  65
+@ATOMPOSITIONS
+  Ba 0 .36498 1/2
+  Ba 0 .63502 1/2
+  Ba 1/2 .13502 1/2
+  Ba 1/2 .86498 1/2
+  Cu 0 .06138 0
+  Cu 0 .21296 0
+  Cu 0 .78704 0
+  Cu 0 .93862 0
+  Cu 1/2 .28704 0
+  Cu 1/2 .43862 0
+  Cu 1/2 .56138 0
+  Cu 1/2 .71296 0
+  O 0 .05253 1/2
+  O 0 .14562 0
+  O 0 .28178 0
+  O 0 .44786 0
+  O 0 .55214 0
+  O 0 .71822 0
+  O 0 .85438 0
+  O 0 .94747 1/2
+  O 1/2 .05214 0
+  O 1/2 .21822 0
+  O 1/2 .35438 0
+  O 1/2 .44747 1/2
+  O 1/2 .55253 1/2
+  O 1/2 .64562 0
+  O 1/2 .78178 0
+  O 1/2 .94786 0
+  Y 0 1/2 1/2
+  Y 1/2 0 1/2
+@DYNINFO
+  # WARNING: Using fallback Debye temperature value!
+  element Ba
+  fraction 2/15
+  type vdosdebye
+  debye_temp 300
+@DYNINFO
+  # WARNING: Using fallback Debye temperature value!
+  element Cu
+  fraction 4/15
+  type vdosdebye
+  debye_temp 300
+@DYNINFO
+  # WARNING: Using fallback Debye temperature value!
+  element O
+  fraction 8/15
+  type vdosdebye
+  debye_temp 300
+@DYNINFO
+  # WARNING: Using fallback Debye temperature value!
+  element Y
+  fraction 1/15
+  type vdosdebye
+  debye_temp 300
