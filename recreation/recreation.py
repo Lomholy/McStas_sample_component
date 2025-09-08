@@ -112,10 +112,19 @@ S = 1
 q = np.linspace(0.01, 1, 10000)
 R = 100
 
-anal = n_measured(flux, a, dist, solid, sigma_att, phi,delta_rho, V, S, q,R)
+
 # Load in the sans data
 data = ms.load_data("../data/sans")
 data = data[2] # And restrict ourselves to the last monitor
+
+# Plot the raw data monitor
+fig, ax = plt.subplots()
+heat = ax.imshow(data.Intensity, norm='symlog', extent=data.metadata.limits)
+fig.colorbar(heat, label=r'Intensity [\#n/s]')
+ax.set(xlabel='x [cm]', ylabel ='y [cm]')
+
+fig.tight_layout()
+fig.savefig('./figures/sans_detector.png', dpi=300)
 
 # Warning occurs from detector and ai. Disregard this.
 
@@ -131,8 +140,7 @@ wavelength = 1/np.sqrt(5)/0.11056
 ai.set_wavelength(4*1e-10)
 ai.poni1  = 0.5
 ai.poni2 = 0.5
-two_theta, I = ai.integrate1d(data.Intensity, 100, unit="2th_deg") 
-result = ai.integrate2d(data.Intensity, 100)
+two_theta, I = ai.integrate1d(data.Intensity, 1000, unit="2th_deg") 
 
 fig, ax = plt.subplots(figsize=(10,4))
 q = np.sin((two_theta)*np.pi/180/2)*4*np.pi/wavelength
@@ -142,12 +150,12 @@ ax.set(yscale="log")
 
 ax.plot(q,n_measured(flux, a, dist, solid, sigma_att, phi,delta_rho, V, S, q,R), label="Analytical")
 # q = np.insert(q,0,1e-3)[:-1]
-ax.step(q, I,label="Data")
+ax.step(q, I,label="McStas")
 
 # Set legends and labels
 ax.legend()
 ax.grid(True, which='major')
-ax.set(xlabel=r"$Q [nm^-1]$", ylabel=r"Intensity [#n/s]")
+ax.set(xlabel=r"$Q [nm^-1]$", ylabel=r"Intensity [\#n/s]")
 fig.tight_layout()
 fig.savefig("./figures/SANS.png", dpi=300)
 
@@ -387,13 +395,157 @@ ax.set(xlabel=r"2$\theta$ [deg]",ylabel="Intensity Integrated at peaks [n/s]")
 fig.tight_layout()
 fig.savefig('./figures/powder_debye.png', dpi=300)
 
-
+print("Just before single crystal")
 
 ################################################################################
 ########## Single Crystal
 ################################################################################
+# Load in the data
+data_single = ms.load_data('../data/single_crystal_ybco')
+data_pretty_plot = ms.load_data('../data/single_crystal_high_wave')
+data_ncrystal = ms.load_data('../data/ncrystal_ybco')
+data_cop = ms.load_data('../data/single_crystal_cop')
+fourPiMon = data_pretty_plot[-5]
+azim = (fourPiMon.metadata.limits[0],fourPiMon.metadata.limits[1])
+vert = fourPiMon.metadata.limits[2],fourPiMon.metadata.limits[3]
+
+
+X, Y = np.meshgrid(np.linspace(*azim, 3600), np.linspace(*vert,3600))
+
+# First plot the 4 Pi monitor
+fig, ax = plt.subplots(figsize=(16,8), ncols=2)
+ax[0].imshow(fourPiMon.Intensity, norm='log', 
+             cmap='Blues_r',
+             extent =fourPiMon.metadata.limits, aspect='auto')
+ax[0].set(xlabel='Horizontal angle [deg]', ylabel='Vertical angle [deg]')
+ax[1].set(xlabel='Horizontal angle [deg]', ylabel='Vertical angle [deg]')
+# Make a mask to select only the data that is within a specific reflection
+x_min = 86.5
+x_max = 98
+y_min = -2
+y_max = 2
+mask = ((X>x_min) & (X<x_max))
+mask = mask & ((Y>y_min) & (Y<y_max))
+zoomed_in = np.where(mask, fourPiMon.Intensity, np.nan)   # same shape as X (3600, 3600)
+
+heat = ax[1].imshow(zoomed_in, norm='symlog',cmap='Blues_r', aspect='auto',
+                    extent=fourPiMon.metadata.limits)
+ax[1].set_xlim(x_min, x_max)   # zoom in x-range
+ax[1].set_ylim(y_min, y_max)   # zoom in y-range
+fig.colorbar(heat, label=r"Intensity [\#n/s]")
+# Make a 
+
+# --- Add a zooming box on the left plot ---
+import matplotlib.patches as patches
+from mpl_toolkits.axes_grid1.inset_locator import mark_inset
+rect = patches.Rectangle((x_min, y_min),   # lower left corner
+                         x_max - x_min,    # width
+                         y_max - y_min,    # height
+                         linewidth=2, edgecolor='purple', facecolor='none')
+ax[0].add_patch(rect)
+
+# --- Draw connector lines between box and zoom subplot ---
+mark_inset(ax[0], ax[1],
+           loc1=2, loc2=3,   # corners to connect (2=upper left, 4=lower right)
+           fc="none", ec="purple", lw=1.5)
+
+# --- Add colored border around zoomed plot ---
+for spine in ax[1].spines.values():
+    spine.set_edgecolor("purple")
+    spine.set_linewidth(2)
+fig.tight_layout()
+
+fig.savefig('./figures/single_crystal_four_pi', dpi=600)
+
+
+#### Calculate the intensities that should be measured on the detector
+# Find the integral of the reflection
+def calculate_intensity(
+        vol, unit_cell, specific_flux, 
+        wavelength_band, wavelength, 
+        theta, form_factor)->float:
+    return vol/unit_cell**2 * specific_flux/wavelength_band * wavelength**4/(2*np.sin(theta)**2) * form_factor
+
+zoomed_in = np.where(mask, data_single[-5].Intensity, np.nan)   # same shape as X (3600, 3600)
+
+simul_result_ybco = np.sum(zoomed_in[zoomed_in>0])
+specific_flux_ybco = data_single[0].metadata.total_I # #n/s /cm^2
+vol_ybco = 0.01 # cm^3
+
+unit_cell_ybco = 404.778 # AA^3
+wavelength_ybco = 1.944 # AA
+wavelength_band_ybco = 0.4 ## AA
+theta_ybco = 90.8*np.pi/180/2 # Half of the angle measured
+form_factor_ybco = 105.588**2/100
+anal_ybco: float = calculate_intensity(vol_ybco, unit_cell_ybco,
+                                        specific_flux_ybco, wavelength_band_ybco, 
+                                        wavelength_ybco, theta_ybco, form_factor_ybco)
+
+
+zoomed_in_ncrystal = np.where(mask, data_ncrystal[-5].Intensity, np.nan)   # same shape as X (3600, 3600)
+
+simul_result_ybco_ncrystal = np.sum(zoomed_in_ncrystal[zoomed_in_ncrystal>0])
+
+print(f"YBCO Analytical result = {anal_ybco:.4f}\tSimulation result = {simul_result_ybco:.4f}"
+      f"\tncrystal={simul_result_ybco_ncrystal:.4f}"
+      )
+print(f"difference={(anal_ybco-simul_result_ybco)/anal_ybco}")
+
+######################### COPPER SECTION
+
+
+zoomed_in = np.where(mask, data_cop[-5].Intensity, np.nan)   # same shape as X (3600, 3600)
+simul_result_cop = np.sum(zoomed_in[zoomed_in>0])
+
+vol_cop = 0.01 # cm^3
+specific_flux_cop = data_cop[0].metadata.total_I # #n/s /cm^2
+unit_cell_cop = 47.2416
+wavelength_cop = 1.8694804812493104
+wavelength_band_cop = 0.2
+theta_cop = 94*np.pi/180/2 # Half of the angle measured
+form_factor_cop = 30.872
+
+
+form_factor_cop = form_factor_cop**2/100 # Convert fm^2 to barns 
+# form_factor_cop = 9.5308
+
+anal_cop: float = calculate_intensity(vol_cop, unit_cell_cop, specific_flux_cop, 
+                                      wavelength_band_cop, wavelength_cop, 
+                                      theta_cop, form_factor_cop)
+
+
+print(f"Copper Analytical result = {anal_cop:.4f}\tSimulation result = {simul_result_cop:.4f}")
+# print(anal_cop,vol, unit_cell, specific_flux, wavelength_band, wavelength, theta, form_fact)
+print(f"difference={(anal_cop-simul_result_cop)/anal_cop}")
+
+
 
 ################################################################################
 ########## Reflectivity
 ################################################################################
+
+
+# import the reflectivity file
+reflectivity_file = np.loadtxt('../Reflecting/supermirror_m3.rfl').T
+# Import the mcstas simulation
+files = os.listdir('../data/refl')
+simulation = []
+for item in files:
+    item_path = os.path.join('../data/refl', item)
+    if os.path.isdir(item_path) and item.isdigit():
+        simulation.append(ms.load_metadata(item_path))
+
+xaxis = np.array([x[4].parameters['sample_rotation'] for x in simulation])
+lam = 1.2
+xaxis = 4*np.pi/lam*np.sin(xaxis*np.pi/180) # Convert theta to Q
+I =  [x[4].total_I/x[1].total_I for x in simulation]
+
+fig, ax = plt.subplots()
+ax.plot(reflectivity_file[0], reflectivity_file[1], label='Analytical')
+ax.plot(xaxis,I, '.', label='McStas simulation')
+ax.set(xlabel=r'Q [$\AA^{-1}$]', ylabel='Reflectivity')
+ax.legend()
+fig.tight_layout()
+fig.savefig('./figures/reflectivity.png', dpi=300)
+
 
