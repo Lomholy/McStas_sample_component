@@ -99,18 +99,23 @@ def P_sphere(q, R):
     return res
 
 def n_measured(flux, A, dist, solid, sigma_att, phi,delta_rho, V, S, q,R):
-    return flux*A*dist*solid/4/np.pi*sigma_att*phi*delta_rho**2*V*S*P_sphere(q,R)
+    result = flux*A*dist*solid/4/np.pi*sigma_att*phi*delta_rho**2*V*S*P_sphere(q,R)
+    unit_converted_result = result*10**2 # Dimension analysis yielded this factor
+    return unit_converted_result
+
 flux = 1e7 # n/s/cm^2
 a = 1 # cm^2
 dist = 1 # cm
-solid = 10_000/1000_000 # cm^2/cm^2
-sigma_att = np.exp(-0.5*dist*10) # convert dist to meters
-delta_rho = 5**2 #
+solid = 1/25 # m^2/m^2
+sigma_att = np.exp(-0.5*dist/100) # convert dist to meters
+delta_rho = 5*10**-5 #Convert delta_rho from fm/AA^3 to 1/AA^2 
 phi = 1e-2 #
-V = 1
+
 S = 1
-q = np.linspace(0.01, 1, 10000)
+q = np.linspace(0.01, 0.2, 1000)
 R = 100
+V = 4/3*np.pi*R**3
+
 
 
 # Load in the sans data
@@ -155,7 +160,7 @@ ax.step(q, I,label="McStas")
 # Set legends and labels
 ax.legend()
 ax.grid(True, which='major')
-ax.set(xlabel=r"$Q [nm^-1]$", ylabel=r"Intensity [\#n/s]")
+ax.set(xlabel=r"Q [nm$^-1$]", ylabel=r"Intensity [\#n/s]")
 fig.tight_layout()
 fig.savefig("./figures/SANS.png", dpi=300)
 
@@ -245,9 +250,17 @@ ax.legend()
 ax.set(ylim=(0))
 
 ax.grid(True)
-ax.set(xlabel=r"2$\theta$ [deg]",ylabel="Intensity Integrated at peaks [n/s]")
+ax.set(xlabel=r"2$\theta$ [deg]",ylabel=r"Intensity Integrated at peaks [\#n/s]")
 fig.tight_layout()
 fig.savefig('./figures/powder.png', dpi=300)
+
+
+fig, ax = plt.subplots(figsize=(12,4), ncols=1)
+ax.errorbar(data.xaxis, data.Intensity, yerr=data.Error)
+ax.set(ylabel=r'Intensity [\#n/s]', xlabel=r'$2\theta$ [deg]', xlim=(10,100))
+ax.grid(True)
+fig.tight_layout()
+fig.savefig('./figures/powder_raw')
 
 
 ######## Load in extra plot with anisotropy
@@ -379,7 +392,7 @@ fig, ax = plt.subplots(figsize=(12,4), ncols=1)
 # ax2 = ax.twinx()
 ax.plot(nacalf_analytical[0], nacalf_analytical[1], 'r.',markersize=10,label=r'Analytical using Vesta $|F|^2$')
 ax.plot(nacalf_McStas[0], nacalf_McStas[1], '+',markersize=10,label=r'Analytical using McStas $|F|^2$')
-ax.plot(nacalf_Full[0], nacalf_Full[1], 'x',markersize=10,label=r'Analytical using Full $|F|^2$') # With fullprof
+ax.plot(nacalf_Full[0], nacalf_Full[1], 'x',markersize=10,label=r'Analytical using Fullprof $|F|^2$') # With fullprof
 ax.errorbar(nacalf_analytical[0], data_int,yerr=errs, fmt='.', label='McStas simulation')
 
 # ax2.errorbar(data.xaxis, data.Intensity, fmt='k-', label='McStas')
@@ -543,7 +556,7 @@ I =  [x[4].total_I/x[1].total_I for x in simulation]
 fig, ax = plt.subplots()
 ax.plot(reflectivity_file[0], reflectivity_file[1], label='Analytical')
 ax.plot(xaxis,I, '.', label='McStas simulation')
-ax.set(xlabel=r'Q [$\AA^{-1}$]', ylabel='Reflectivity')
+ax.set(xlabel=r'Q [\AA$^{-1}$]', ylabel='Reflectivity')
 ax.legend()
 fig.tight_layout()
 fig.savefig('./figures/reflectivity.png', dpi=300)
