@@ -17,7 +17,12 @@ def n_measured_thin(flux, area, dist, rho, solid, cross, mu):
 
 # Load in the intensity of the thin sample
 thin_mcstas = ms.load_data("../data/inc_box_thin")
-thin_mcstas = thin_mcstas[2].metadata.total_I
+thin_mcstas_flux = thin_mcstas[0].metadata.total_I
+thin_mcstas_flux_err = thin_mcstas[0].metadata.total_E
+thin_mcstas_I = thin_mcstas[2].metadata.total_I
+thin_mcstas_err = thin_mcstas[2].metadata.total_E
+thin_total = thin_mcstas[1].metadata.total_I
+thin_total_err = thin_mcstas[1].metadata.total_E
 
 # Calculated total scattered intensity, uncorrected for absorption
 flux = 1e7 # incoming flux 25 mm from sample n/s/cm^2
@@ -43,8 +48,10 @@ n_tot = n_measured_thin(flux, area, dist, rho, solid_total, cross, mu)
 
 solid = 10/100**2# Solid angle in radians. A/r^2
 n_solid =n_measured_thin(flux, area, dist, rho, solid_angle, cross, mu)
-print(f"Thin: Total scattering= {n_tot:.4g}n/s\tScattering at detector={n_solid:.4g}n/s")
-print(f"Simulation result at detector = {thin_mcstas:.2f}")
+print(f"Thin: Total scattering= {n_tot:.4g} +/-{n_tot:.4g} n/s\tScattering at detector={n_solid:.5f}n/s")
+print(f"Simulation result at detector = {thin_mcstas_I:.5f} +/- {thin_mcstas_err:.4g}")
+print(f"Simulation result flux = {thin_mcstas_flux:.5f} +/- {thin_mcstas_flux_err:.4g}")
+print(f"Simulation result total = {thin_total:.5f} +/- {thin_total_err:.4g}")
 
 
 ############### Thick sample
@@ -62,29 +69,29 @@ n_solid =n_measured_thick(flux, area, dist, rho, solid_angle, cross, mu)
 print(f"Total scattering= {n_tot:.4g}n/s\tScattering at detector={n_solid:.4g}n/s")
 
 # If there is data, load it in
-# path = "../data/inc_box_thick/"
-# if os.path.exists(path):
-#     data_X = []
-#     data_I = []
-#     data_E = []
-#     for file in os.listdir(path):
-#         if "." in file:
-#             continue
-#         sim = ms.load_data(path+file)
-#         data_X.append(sim[2].metadata.parameters['thick'])
-#         data_I.append(sim[2].metadata.total_I)
-#         data_E.append(sim[2].metadata.total_E)
-# data = np.array([data_X, data_I, data_E])
+path = "../data/inc_box_thick/"
+if os.path.exists(path):
+    data_X = []
+    data_I = []
+    data_E = []
+    for file in os.listdir(path):
+        if "." in file:
+            continue
+        sim = ms.load_data(path+file)
+        data_X.append(sim[2].metadata.parameters['thick'])
+        data_I.append(sim[2].metadata.total_I)
+        data_E.append(sim[2].metadata.total_E)
+    data = np.array([data_X, data_I, data_E])
 
-# dist = np.linspace(0.1,5,1000)
-# absolute_scattering = n_measured_thick(flux, area, dist, rho, solid, cross, mu)
-# fig, ax = plt.subplots(ncols=1, figsize=(10,4))
-# ax.plot(dist, absolute_scattering, '-', label="Analytical")
-# ax.errorbar(data[0]*100,data[1],data[2], fmt='+', label="McStas")
-# ax.set(xlabel="thickness [cm]", ylabel="Intensity [n/s]")
-# ax.legend()
-# fig.tight_layout()
-# fig.savefig('./figures/Incoherent_backscattering', dpi=300)
+dist = np.linspace(0.1,5,1000)
+absolute_scattering = n_measured_thick(flux, area, dist, rho, solid, cross, mu)
+fig, ax = plt.subplots(ncols=1, figsize=(10,4))
+ax.plot(dist, absolute_scattering, '-', label="Analytical")
+ax.errorbar(data[0]*100,data[1],data[2], fmt='+', label="McStas")
+ax.set(xlabel="thickness [cm]", ylabel="Intensity [n/s]", ylim=(0))
+ax.legend()
+fig.tight_layout()
+fig.savefig('../figures/Incoherent_backscattering', dpi=300)
 
 
 
@@ -102,10 +109,13 @@ def n_measured(flux, A, dist, solid, sigma_att, phi,delta_rho, V, S, q,R):
     result = flux*A*dist*solid/4/np.pi*sigma_att*phi*delta_rho**2*V*S*P_sphere(q,R)
     unit_converted_result = result*10**2 # Dimension analysis yielded this factor
     return unit_converted_result
+# Load in the sans data
+data = ms.load_data("../data/sans")
+flux = data[0].metadata.total_I/0.25/np.pi # n/s/cm^2
+data = data[2] # And restrict ourselves to the last monitor
 
-flux = 1e7 # n/s/cm^2
-a = 1 # cm^2
-dist = 1 # cm
+a = 0.25*np.pi # cm^2
+dist = 0.1 # cm
 solid = 1/25 # m^2/m^2
 sigma_att = np.exp(-0.5*dist/100) # convert dist to meters
 delta_rho = 5*10**-5 #Convert delta_rho from fm/AA^3 to 1/AA^2 
@@ -118,9 +128,6 @@ V = 4/3*np.pi*R**3
 
 
 
-# Load in the sans data
-data = ms.load_data("../data/sans")
-data = data[2] # And restrict ourselves to the last monitor
 
 # Plot the raw data monitor
 fig, ax = plt.subplots()
@@ -129,7 +136,7 @@ fig.colorbar(heat, label=r'Intensity [\#n/s]')
 ax.set(xlabel='x [cm]', ylabel ='y [cm]')
 
 fig.tight_layout()
-fig.savefig('./figures/sans_detector.png', dpi=300)
+fig.savefig('../figures/sans_detector.png', dpi=300)
 
 # Warning occurs from detector and ai. Disregard this.
 
@@ -145,24 +152,35 @@ wavelength = 1/np.sqrt(5)/0.11056
 ai.set_wavelength(4*1e-10)
 ai.poni1  = 0.5
 ai.poni2 = 0.5
-two_theta, I = ai.integrate1d(data.Intensity, 1000, unit="2th_deg") 
+two_theta, I, E = ai.integrate1d(data.Intensity, 1000, unit="2th_deg", error_model='poisson') 
 
-fig, ax = plt.subplots(figsize=(10,4))
 q = np.sin((two_theta)*np.pi/180/2)*4*np.pi/wavelength
 
+print("Just before mosaic")
 
-ax.set(yscale="log")
+fig, ax = plt.subplot_mosaic([['main', 'main'],
+                              ['main', 'main'],
+                              ['diff', 'diff']])
 
-ax.plot(q,n_measured(flux, a, dist, solid, sigma_att, phi,delta_rho, V, S, q,R), label="Analytical")
-# q = np.insert(q,0,1e-3)[:-1]
-ax.step(q, I,label="McStas")
+anal = n_measured(flux, a, dist, solid, sigma_att, phi,delta_rho, V, S, q,R)
+ax['main'].set(yscale="log")
+ax['main'].plot(q,anal, label="Analytical")
+# q = np.insert(q,'main',1e-3)[:-1]
+ax['main'].step(q, I,label="McStas")
 
 # Set legends and labels
-ax.legend()
-ax.grid(True, which='major')
-ax.set(xlabel=r"Q [nm$^-1$]", ylabel=r"Intensity [\#n/s]")
+
+ax['main'].grid(True, which='major')
+ax['main'].set(xlabel=r"Q [nm$^-1$]", ylabel=r"Intensity [\#n/s]", ylim=(1e-4))
+
+
+ax['diff'].plot(q,(I-anal)/I,'.b',markersize=2, label=r'Difference as \% of McStas')
+
+ax['diff'].set(ylim = (-0.4,0.4), xlabel="Q", ylabel=r"Difference [\%]")
+fig.legend()
+
 fig.tight_layout()
-fig.savefig("./figures/SANS.png", dpi=300)
+fig.savefig("../figures/SANS.png", dpi=300)
 
 
 ################################################################################
@@ -252,7 +270,7 @@ ax.set(ylim=(0))
 ax.grid(True)
 ax.set(xlabel=r"2$\theta$ [deg]",ylabel=r"Intensity Integrated at peaks [\#n/s]")
 fig.tight_layout()
-fig.savefig('./figures/powder.png', dpi=300)
+fig.savefig('../figures/powder.png', dpi=300)
 
 
 fig, ax = plt.subplots(figsize=(12,4), ncols=1)
@@ -260,7 +278,7 @@ ax.errorbar(data.xaxis, data.Intensity, yerr=data.Error)
 ax.set(ylabel=r'Intensity [\#n/s]', xlabel=r'$2\theta$ [deg]', xlim=(10,100))
 ax.grid(True)
 fig.tight_layout()
-fig.savefig('./figures/powder_raw')
+fig.savefig('../figures/powder_raw')
 
 
 ######## Load in extra plot with anisotropy
@@ -406,7 +424,7 @@ ax.grid(True)
 ax.set(xlabel=r"2$\theta$ [deg]",ylabel="Intensity Integrated at peaks [n/s]")
 # ax2.set(ylabel="Intensity [n/s] simulation output")
 fig.tight_layout()
-fig.savefig('./figures/powder_debye.png', dpi=300)
+fig.savefig('../figures/powder_debye.png', dpi=300)
 
 print("Just before single crystal")
 
@@ -426,8 +444,8 @@ vert = fourPiMon.metadata.limits[2],fourPiMon.metadata.limits[3]
 X, Y = np.meshgrid(np.linspace(*azim, 3600), np.linspace(*vert,3600))
 
 # First plot the 4 Pi monitor
-fig, ax = plt.subplots(figsize=(16,8), ncols=2)
-ax[0].imshow(fourPiMon.Intensity, norm='log', 
+fig, ax = plt.subplots(figsize=(10,5), ncols=2)
+ax[0].imshow(fourPiMon.Intensity, norm='symlog', 
              cmap='Blues_r',
              extent =fourPiMon.metadata.limits, aspect='auto')
 ax[0].set(xlabel='Horizontal angle [deg]', ylabel='Vertical angle [deg]')
@@ -468,7 +486,7 @@ for spine in ax[1].spines.values():
     spine.set_linewidth(2)
 fig.tight_layout()
 
-fig.savefig('./figures/single_crystal_four_pi', dpi=600)
+fig.savefig('../figures/single_crystal_four_pi', dpi=600)
 
 
 #### Calculate the intensities that should be measured on the detector
@@ -559,6 +577,6 @@ ax.plot(xaxis,I, '.', label='McStas simulation')
 ax.set(xlabel=r'Q [\AA$^{-1}$]', ylabel='Reflectivity')
 ax.legend()
 fig.tight_layout()
-fig.savefig('./figures/reflectivity.png', dpi=300)
+fig.savefig('../figures/reflectivity.png', dpi=300)
 
 
