@@ -51,8 +51,8 @@ INITIALIZE
 
 TRACE
 
-COMPONENT origin = Progress_bar()
-AT (0, 0, 0) RELATIVE ABSOLUTE
+// COMPONENT origin = Progress_bar()
+// AT (0, 0, 0) RELATIVE ABSOLUTE
 
 //==============================================================================
 //===========================SOURCE AND BEAM PORT=============================
@@ -123,6 +123,11 @@ SPLIT 1 COMPONENT sample = PowderN( reflections = filename,
     sigma_abs=-1,sigma_inc=-1, order=0
     // Test absorption effects 
 ) AT (0, 0, 0) RELATIVE arm_sample
+EXTEND %{
+  // printf("%g\n", l + l_1);
+  p /= exp (-(line_info.my_a_v / v + my_s) * (l + l_1));
+
+%}
 
 
 COMPONENT pitest = PSD_monitor_4PI(
