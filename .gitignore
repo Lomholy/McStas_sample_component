@@ -1,3 +1,11 @@
 ./inc.c
 
-./data/*
+*data/*
+
+*.c
+recreation/*.instr
+figures/*
+*.out
+
+*.dSYM*
+
