@@ -218,6 +218,32 @@ fig.legend()
 fig.tight_layout()
 fig.savefig("../figures/SANS.png", dpi=300)
 
+fig, ax = plt.subplot_mosaic([['main', 'main'],
+                              ['main', 'main'],
+                              ['diff', 'diff']])
+
+ax['main'].plot(q,anal, label="Analytical")
+# q = np.insert(q,'main',1e-3)[:-1]
+ax['main'].step(q, I,label="McStas")
+
+# Set legends and labels
+
+ax['main'].grid(True, which='major')
+ax['main'].set(xlabel=r"Q [\AA$^{-1}$]", ylabel=r"Intensity [\#n/s]", ylim=(1e-4))
+
+
+ax['diff'].plot(q,(I-anal)/I * 100,'.b',markersize=2, label=r'Difference as \% of McStas')
+
+ax['diff'].set(ylim = (-40,40), xlabel=r"Q [\AA$^{-1}$]", ylabel=r"Difference [\%]")
+fig.legend()
+
+fig.tight_layout()
+fig.savefig("../figures/SANS_non_log.png", dpi=300)
+
+
+
+
+
 fig, ax = plt.subplots()
 heat = ax.imshow(data.Intensity, norm='symlog', extent=data.metadata.limits)
 fig.colorbar(heat, label=r'Intensity [\#n/s]')
@@ -602,7 +628,7 @@ print(f"difference={(anal_ybco-simul_result_ybco)/anal_ybco}")
 
 
 # import the reflectivity file
-reflectivity_file = np.loadtxt('../Reflecting/supermirror_m3.rfl').T
+reflectivity_file = np.loadtxt('../Reflecting/analytical.rfl').T
 # Import the mcstas simulation
 files = os.listdir('../data/refl')
 simulation = []

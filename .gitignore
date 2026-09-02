@@ -4,8 +4,9 @@
 
 *.c
 recreation/*.instr
-figures/*
+figures
+drafts
 *.out
-
+*.DS_Store
 *.dSYM*
 

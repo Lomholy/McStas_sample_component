@@ -101,6 +101,7 @@ fi
 # Reflectivity 
 if test "$1" = "refl"; then
     cd ../Reflecting
+    rm -r ../data/refl
     mcrun --scan_split=0 -c ../Reflecting/Refl.instr -n 1e5\
     -d ../data/refl sample_rotation=0,1 -N 80 
     # mcplot ../data/refl
