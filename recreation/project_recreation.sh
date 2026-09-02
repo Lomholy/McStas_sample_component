@@ -3,10 +3,7 @@
 
 
 # First move into this folder
-cd $HOME/Desktop/Phd/Projects/single_scattering/recreation
-if ! [ $# -eq 2 ]; then
-    rm -r ../data/*
-fi
+cd $HOME/Phd/Projects/McStas_dev/single_scattering/recreation
 
 #Scan flux
 if test "$1" = "flux"; then
@@ -40,19 +37,27 @@ fi
 if test "$1" = "sans"; then
     cd ../Sans
     rm -r ../data/sans
-    mcrun --mpi=15 -c ../Sans/sans.instr E_i=5 -n 1e9\
-    -d ../data/sans 
+    rm -r ../data/sans_andreas
+    mcrun --mpi=15 -c ../Sans/sans.instr -n 1e9 use_andreas=0\
+    improved_res=0 -d ../data/sans 
+    mcrun --mpi=15 -c ../Sans/sans.instr -n 1e9 use_andreas=1\
+    improved_res=0 -d ../data/sans_andreas
     # mcplot ../data/sans
 fi
 
 # Powder diffractometer
 if test "$1" = "powder"; then
     cd ../Powder
+    rm -r ../data/powder_cop
+    rm -r ../data/powder_nacalf
+    rm -r ../data/powder_nacalf_no_debye
+    mcrun --mpi=15 -c ../Powder/DMC.instr flux_mult=3.44 -n 1e8\
+    -d ../data/powder_nacalf
+
     mcrun --mpi=15 -c ../Powder/DMC.instr flux_mult=3.44 -n 1e8\
     -d ../data/powder_nacalf_no_debye filename="NaCaAlF_no_debye.cif"
 
-    mcrun --mpi=15 -c ../Powder/DMC.instr flux_mult=3.44 -n 1e8\
-    -d ../data/powder_nacalf
+
     # mcplot ../data/powder
 
     # Powder diffractometer copper
@@ -64,6 +69,11 @@ fi
 # Single Crystal
 if test "$1" = "single"; then
     cd ../Single_crystal
+    rm -r ../data/single_crystal_cop
+    rm -r ../data/single_crystal_ybco
+    rm -r ../data/ncrystal_ybco
+    rm -r ../data/single_crystal_high_wave
+
     # Copper
     mcrun --mpi=15 -c ./DMC.instr flux_mult=6.44 -n 1e7\
     -d ../data/single_crystal_cop mos=20 filename="Copper.cif" dlam=0.1 lam0=1.82 beam_size=0.01\
@@ -81,7 +91,7 @@ if test "$1" = "single"; then
     mcrun --mpi=15 -c ./DMC.instr flux_mult=3.44 -n 1e7\
     -d ../data/single_crystal_high_wave lam0=2 dlam=1.6 mos=50    
     # mcplot ../data/single_crystal
-    
+
     # Scan over delta bragg
     # mcrun --scan_split=0 -c ./DMC.instr flux_mult=1e-2 -n 1e6\
     #  -d ../data/single_crystal_scan mos=20 delta_bragg=-0.025,0.025 -N 21 dlam=1e-3 lam0=1.940
@@ -99,29 +109,28 @@ fi
 # Run all for recreating them
 if test "$1" = "all"; then
     #Scan flux
-    source ./project_recreation.sh flux dontdelete
-    
+    source ./project_recreation.sh flux 
 
     # Incoherent scattering one shot
-    source ./project_recreation.sh thin dontdelete
+    source ./project_recreation.sh thin 
 
     # Backscattering
-    source ./project_recreation.sh thick dontdelete
+    source ./project_recreation.sh thick 
 
 
     # Small angle scattering instrument
-    source ./project_recreation.sh sans dontdelete
+    source ./project_recreation.sh sans 
 
 
     # Powder diffractometer
-    source ./project_recreation.sh powder dontdelete
+    source ./project_recreation.sh powder
 
     # Single crystal simulation
-    source ./project_recreation.sh single dontdelete
+    source ./project_recreation.sh single 
 
 
     # Reflectivity simulation
-    source ./project_recreation.sh refl dontdelete
+    source ./project_recreation.sh refl 
 fi
 
 cd ../recreation

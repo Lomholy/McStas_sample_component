@@ -102,59 +102,96 @@ import pyFAI as pf
 
 def P_sphere(q, R):
     res = 3*(np.sin(q*R) - q*R*np.cos(q*R) )/ (q*R)**3
-    res = res**2
     return res
 
-def n_measured(flux, A, dist, solid, sigma_att, phi,delta_rho, V, S, q,R):
-    result = flux*A*dist*solid/4/np.pi*sigma_att*phi*delta_rho**2*V*S*P_sphere(q,R)
-    unit_converted_result = result*10**2 # Dimension analysis yielded this factor
-    return unit_converted_result
+def dSigdW(q, R, phi, drho):
+    V = 4/3 * np.pi * R**3 
+    return phi * drho**2 * V * P_sphere(q,R)**2
+
+def w_att(l_full, mu_a, delta_rho, phi, R, lam):
+    Qmind = 0.0000001
+    Qmaxd = 100
+    qmin = 0
+
+    Isq = 0
+
+    Qminl = np.log10 (Qmind)
+    Qmaxl = np.log10 (Qmaxd)
+    istp = np.floor((Qmaxl - Qminl) * 300.0 + 0.5)
+    step = (np.log10 (min(Qmaxd, 4.0 * np.pi / lam)) - Qminl) / istp
+    print(istp)
+    for k in range(int(istp)):
+        qmax = pow (10.0, Qminl + k * step)
+        q = 0.5 * (qmin + qmax)
+        Isq += dSigdW (q, R, phi, delta_rho) * q * (qmax - qmin)
+        qmin = qmax
+
+    print(f"Integrated coherent scattering cross section at 4 angs is {Isq:.4g}\n")
+    v = 3956 / lam
+    V2K = 1.58825361e-3
+    k0 = v * V2K
+    Isq *= 2 * np.pi / (k0**2)
+    print(2 * np.pi / (k0**2))
+    return np.exp(-l_full * 1.00175  * (mu_a * 2200/v + Isq))
+
+def n_measured_sans(flux, dist, solid, sigma_att, phi, delta_rho, q, R, lam):
+
+    att_factor = w_att(dist, sigma_att, delta_rho, phi, R, lam)
+
+    
+    dsdw = dSigdW(q, R, phi, delta_rho)
+    
+    result = flux * dist * solid * att_factor * dsdw
+    
+    # print(f"flux={flux:.4g} dist = {dist:.4g} solid = {solid:.4g} att = {att_factor:.4g}\t product = { dist * solid * att_factor * dsdw}")
+    # for i,k in zip(q, dsdw):
+    #     print(f"q={i}\t dsdw={k}")
+        
+    return result
+
 # Load in the sans data
 data = ms.load_data("../data/sans")
-flux = data[0].metadata.total_I/0.25/np.pi # n/s/cm^2
-data = data[2] # And restrict ourselves to the last monitor
-
-a = 0.25*np.pi # cm^2
-dist = 0.1 # cm
-solid = 1/25 # m^2/m^2
-sigma_att = np.exp(-0.5*dist/100) # convert dist to meters
-delta_rho = 5*10**-5 #Convert delta_rho from fm/AA^3 to 1/AA^2 
-phi = 1e-2 #
-
-S = 1
-q = np.linspace(0.01, 0.2, 1000)
-R = 100
-V = 4/3*np.pi*R**3
+flux = data[2].metadata.total_I # n/s/cm^2
+data = data[4] # And restrict ourselves to the last monitor
 
 
+# Calculate uncertainty in energy
+wavelength = 1/np.sqrt(5)/0.11056
+d = 0.475
+dwavelength = 1/np.sqrt(5-d)/0.11056
+print(dwavelength/wavelength)
 
 
-# Plot the raw data monitor
-fig, ax = plt.subplots()
-heat = ax.imshow(data.Intensity, norm='symlog', extent=data.metadata.limits)
-fig.colorbar(heat, label=r'Intensity [\#n/s]')
-ax.set(xlabel='x [cm]', ylabel ='y [cm]')
-
-fig.tight_layout()
-fig.savefig('../figures/sans_detector.png', dpi=300)
-
-# Warning occurs from detector and ai. Disregard this.
-
+# detector = pf.detectors.Detector(100e-5, 100e-5)
 detector = pf.detector_factory("detector")
 detector.set_pixel1(1/1000)
 detector.set_pixel2(1/1000)
 
 # Set the azimuthal integrator
-ai = pf.AzimuthalIntegrator(dist=5, detector=detector)
+ai = pf.AzimuthalIntegrator(dist=4.99999, detector=detector)
 
 
+# ai = pf.integrator.azimuthal.AzimuthalIntegrator(dist=5, detector=detector)
 wavelength = 1/np.sqrt(5)/0.11056
-ai.set_wavelength(4*1e-10)
+ai.set_wavelength(wavelength*1e-10)
 ai.poni1  = 0.5
 ai.poni2 = 0.5
-two_theta, I, E = ai.integrate1d(data.Intensity, 1000, unit="2th_deg", error_model='poisson') 
-
+two_theta, I, E = ai.integrate1d(data.Intensity, 700, variance=data.Error**2, correctSolidAngle=True, unit="2th_deg") 
 q = np.sin((two_theta)*np.pi/180/2)*4*np.pi/wavelength
+# result = ai.integrate2d(data.Intensity, 100)
+
+
+dist = 0.001 # m
+# Solid is the solid angle of each bin on the 
+solid = 4 * 10**(-8)#(np.atan(0.5/5)*2)**2
+print(solid)
+delta_rho = 5 # fm/AA^3
+phi = 1e-2 # Unit less
+
+R = 100 # AA
+
+sigma_att = 0 # m^-1
+anal = n_measured_sans(flux, dist, solid, sigma_att, phi,delta_rho, q, R, wavelength)
 
 print("Just before mosaic")
 
@@ -162,7 +199,6 @@ fig, ax = plt.subplot_mosaic([['main', 'main'],
                               ['main', 'main'],
                               ['diff', 'diff']])
 
-anal = n_measured(flux, a, dist, solid, sigma_att, phi,delta_rho, V, S, q,R)
 ax['main'].set(yscale="log")
 ax['main'].plot(q,anal, label="Analytical")
 # q = np.insert(q,'main',1e-3)[:-1]
@@ -171,16 +207,24 @@ ax['main'].step(q, I,label="McStas")
 # Set legends and labels
 
 ax['main'].grid(True, which='major')
-ax['main'].set(xlabel=r"Q [nm$^-1$]", ylabel=r"Intensity [\#n/s]", ylim=(1e-4))
+ax['main'].set(xlabel=r"Q [\AA$^{-1}$]", ylabel=r"Intensity [\#n/s]", ylim=(1e-4))
 
 
-ax['diff'].plot(q,(I-anal)/I,'.b',markersize=2, label=r'Difference as \% of McStas')
+ax['diff'].plot(q,(I-anal)/I * 100,'.b',markersize=2, label=r'Difference as \% of McStas')
 
-ax['diff'].set(ylim = (-0.4,0.4), xlabel="Q", ylabel=r"Difference [\%]")
+ax['diff'].set(ylim = (-40,40), xlabel=r"Q [\AA$^{-1}$]", ylabel=r"Difference [\%]")
 fig.legend()
 
 fig.tight_layout()
 fig.savefig("../figures/SANS.png", dpi=300)
+
+fig, ax = plt.subplots()
+heat = ax.imshow(data.Intensity, norm='symlog', extent=data.metadata.limits)
+fig.colorbar(heat, label=r'Intensity [\#n/s]')
+ax.set(xlabel='x [cm]', ylabel ='y [cm]')
+
+fig.tight_layout()
+fig.savefig('../figures/sans_detector.png', dpi=300)
 
 
 ################################################################################
@@ -219,7 +263,7 @@ def get_formfact(file):
     return cif
 
 # Scale the cif pattern 
-def  n_measured(flux,A, dist,h, unit_cell_vol, wavelength, r,pattern):
+def  n_measured_powder(flux,A, dist,h, unit_cell_vol, wavelength, r,pattern):
     form_factor = pattern[1]/100
     # print(np.sqrt(form_factor))
     deb_prop = h/(2*np.sin(pattern[0]*np.pi/180)*r*np.pi)
@@ -240,7 +284,7 @@ wavelength = 2.567 # AA
 rho = 1/unit_cell_vol # AA^-3
 
 nacalf_analytical = get_formfact('../Powder/NaCaAlF_no_debye.txt')
-nacalf_analytical = n_measured(flux, A, dist,h, unit_cell_vol, wavelength,r, nacalf_analytical)
+nacalf_analytical = n_measured_powder(flux, A, dist,h, unit_cell_vol, wavelength,r, nacalf_analytical)
 
 
 # Load the data and generate the simulated diffractogram
@@ -285,7 +329,7 @@ fig.savefig('../figures/powder_raw')
 # # Load the powder structure and generate the theoretical diffractogram
 # Load in Structure factor from Vesta
 
-def get_formfact(file):
+def get_formfact2(file):
     data_from_cif = pd.read_table(file, sep=r'\s+', header=0)
     # data_from_cif = pd.read_table("Copper.txt", sep=r'\s+', header=0)
 
@@ -333,7 +377,7 @@ unit_cell_vol = 1079.1 # AA^3=10^-24 cm
 wavelength = 2.567 # AA
 rho = 1/unit_cell_vol # AA^-3
 
-nacalf_analytical = get_formfact('../Powder/NaCaAlF.txt')
+nacalf_analytical = get_formfact2('../Powder/NaCaAlF.txt')
 nacalf_F = nacalf_analytical[1]
 
 
@@ -500,6 +544,7 @@ def calculate_intensity(
 zoomed_in = np.where(mask, data_single[-5].Intensity, np.nan)   # same shape as X (3600, 3600)
 
 simul_result_ybco = np.sum(zoomed_in[zoomed_in>0])
+err_result_ybco = np.sqrt(np.sum(zoomed_in[zoomed_in>0]**2))
 specific_flux_ybco = data_single[0].metadata.total_I # #n/s /cm^2
 vol_ybco = 0.01 # cm^3
 
@@ -517,7 +562,7 @@ zoomed_in_ncrystal = np.where(mask, data_ncrystal[-5].Intensity, np.nan)   # sam
 
 simul_result_ybco_ncrystal = np.sum(zoomed_in_ncrystal[zoomed_in_ncrystal>0])
 
-print(f"YBCO Analytical result = {anal_ybco:.4f}\tSimulation result = {simul_result_ybco:.4f}"
+print(f"YBCO Analytical result = {anal_ybco:.4f}\tSimulation result = {simul_result_ybco:.4f} +- {err_result_ybco:.2g}"
       f"\tncrystal={simul_result_ybco_ncrystal:.4f}"
       )
 print(f"difference={(anal_ybco-simul_result_ybco)/anal_ybco}")
@@ -525,29 +570,29 @@ print(f"difference={(anal_ybco-simul_result_ybco)/anal_ybco}")
 ######################### COPPER SECTION
 
 
-zoomed_in = np.where(mask, data_cop[-5].Intensity, np.nan)   # same shape as X (3600, 3600)
-simul_result_cop = np.sum(zoomed_in[zoomed_in>0])
+# zoomed_in = np.where(mask, data_cop[-5].Intensity, np.nan)   # same shape as X (3600, 3600)
+# simul_result_cop = np.sum(zoomed_in[zoomed_in>0])
 
-vol_cop = 0.01 # cm^3
-specific_flux_cop = data_cop[0].metadata.total_I # #n/s /cm^2
-unit_cell_cop = 47.2416
-wavelength_cop = 1.8694804812493104
-wavelength_band_cop = 0.2
-theta_cop = 94*np.pi/180/2 # Half of the angle measured
-form_factor_cop = 30.872
-
-
-form_factor_cop = form_factor_cop**2/100 # Convert fm^2 to barns 
-# form_factor_cop = 9.5308
-
-anal_cop: float = calculate_intensity(vol_cop, unit_cell_cop, specific_flux_cop, 
-                                      wavelength_band_cop, wavelength_cop, 
-                                      theta_cop, form_factor_cop)
+# vol_cop = 0.01 # cm^3
+# specific_flux_cop = data_cop[0].metadata.total_I # #n/s /cm^2
+# unit_cell_cop = 47.2416
+# wavelength_cop = 1.8694804812493104
+# wavelength_band_cop = 0.2
+# theta_cop = 94*np.pi/180/2 # Half of the angle measured
+# form_factor_cop = 30.872
 
 
-print(f"Copper Analytical result = {anal_cop:.4f}\tSimulation result = {simul_result_cop:.4f}")
-# print(anal_cop,vol, unit_cell, specific_flux, wavelength_band, wavelength, theta, form_fact)
-print(f"difference={(anal_cop-simul_result_cop)/anal_cop}")
+# form_factor_cop = form_factor_cop**2/100 # Convert fm^2 to barns 
+# # form_factor_cop = 9.5308
+
+# anal_cop: float = calculate_intensity(vol_cop, unit_cell_cop, specific_flux_cop, 
+#                                       wavelength_band_cop, wavelength_cop, 
+#                                       theta_cop, form_factor_cop)
+
+
+# print(f"Copper Analytical result = {anal_cop:.4f}\tSimulation result = {simul_result_cop:.4f}")
+# # print(anal_cop,vol, unit_cell, specific_flux, wavelength_band, wavelength, theta, form_fact)
+# print(f"difference={(anal_cop-simul_result_cop)/anal_cop}")
 
 
 
