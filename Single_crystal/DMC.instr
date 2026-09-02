@@ -130,8 +130,8 @@ COMPONENT single_sample = Single_crystal(
 AT (0, 0, 0) RELATIVE arm_sample
 ROTATED (0,delta_bragg,0) RELATIVE arm_sample
 
-COMPONENT ncrystal_sample = NCrystal_sample(
-    cfg = "YBaCuO.ncmat;bragg=1;incoh_elas=0;inelas=0;sans=0;dir1=@crys_hkl:1,0,0@lab:1,0,0;dir2=@crys:0,0,1@lab:0,0,1;mos=20arcmin",
+COMPONENT ncrystal_samplie = NCrystal_sample(
+    cfg = "YBaCuO.ncmat;bragg=1;incoh_elas=0;inelas=0;sans=0;dir1=@crys:1,0,0@lab:1,0,0;dir2=@crys:0,1,0@lab:0,1,0;dirtol=0.0001deg;mos=20arcmin",
     absorptionmode=0,
     multscat=0,
     xwidth = 0.01,
@@ -139,13 +139,13 @@ COMPONENT ncrystal_sample = NCrystal_sample(
     zdepth = 0.0001
 ) WHEN (sample==1)
 AT (0, 0, 0.0001) RELATIVE arm_sample
-ROTATED (0,delta_bragg,0) RELATIVE arm_sample
+ROTATED (0,delta_bragg,90) RELATIVE arm_sample
 
 
-// COMPONENT beamstop = Beamstop(
-//     radius = 0.1
-// ) AT (0,0,0.8) RELATIVE PREVIOUS
-// ROTATED (0, 0, 0) RELATIVE PREVIOUS
+COMPONENT beamstop = Beamstop(
+    radius = 0.1
+) AT (0,0,0.8) RELATIVE PREVIOUS
+ROTATED (0, 0, 0) RELATIVE PREVIOUS
 
 
 //==============================================================================
@@ -191,8 +191,8 @@ COMPONENT lam_mon_cop = L_monitor(
     filename = "lam_mon_cop",
     xwidth = 0.2,
     yheight = 0.2,
-    Lmin = 1.78,
-    Lmax = 1.88,
+    Lmin = 1.80,
+    Lmax = 1.82,
     restore_neutron = 1
 ) AT (0, 0, 2) RELATIVE arm_det_check
 ROTATED (0,0,0) RELATIVE arm_det_check
