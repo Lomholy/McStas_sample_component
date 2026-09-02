@@ -7,7 +7,10 @@ The repository is structured such that each scattering scenario is implemented a
 - A McStas instrument description (`*.instr`)
 - Analytical reference calculations (`Analytical.ipynb`)
 - Supporting crystallographic or material input files
-- Recreation scripts used to generate publication figures
+- Recreation scripts used to generate publication figures 
+
+
+The recreation scripts also perform the same analytical calculations as each jupyter notebook does, and thus the output of notebooks and the recreation script should align.
 
 The purpose of the repository is to demonstrate and validate the physical correctness of the sample component through comparison against analytical solutions and crystallographic calculations.
 
